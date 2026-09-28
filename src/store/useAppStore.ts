@@ -5,6 +5,77 @@ import { fetchSchool, updateSchoolData, fetchSessions, setActiveSessionId } from
 
 export type AppTheme = 'emerald' | 'indigo' | 'berry';
 
+export type NavGroupId =
+  | 'main'
+  | 'students'
+  | 'fees'
+  | 'academics'
+  | 'finance'
+  | 'staff'
+  | 'communication'
+  | 'admin'
+  | 'account';
+
+export const SIDEBAR_GROUPS_STORAGE_KEY = 'dc_sidebar_collapsed_groups';
+
+export function getNavGroupByPath(pathname: string): NavGroupId | null {
+  if (pathname === '/' || pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
+    return 'main';
+  }
+  if (pathname.startsWith('/students') || pathname.startsWith('/enquiries')) {
+    return 'students';
+  }
+  if (pathname.startsWith('/fees')) {
+    return 'fees';
+  }
+  if (pathname.startsWith('/academics')) {
+    return 'academics';
+  }
+  if (pathname.startsWith('/finance')) {
+    return 'finance';
+  }
+  if (pathname.startsWith('/staff')) {
+    return 'staff';
+  }
+  if (pathname.startsWith('/notices')) {
+    return 'communication';
+  }
+  if (pathname.startsWith('/admin')) {
+    return 'admin';
+  }
+  if (pathname.startsWith('/account')) {
+    return 'account';
+  }
+  return null;
+}
+
+function loadInitialSidebarCollapsedGroups(): Record<string, boolean> {
+  let stored: Record<string, boolean> = {};
+  try {
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem(SIDEBAR_GROUPS_STORAGE_KEY);
+      if (raw) {
+        stored = JSON.parse(raw);
+      }
+    }
+  } catch {
+    stored = {};
+  }
+
+  // Ensure active route group is expanded upon initialization / page refresh
+  if (typeof window !== 'undefined') {
+    const activeGroup = getNavGroupByPath(window.location.pathname);
+    if (activeGroup && stored[activeGroup]) {
+      stored[activeGroup] = false;
+      try {
+        localStorage.setItem(SIDEBAR_GROUPS_STORAGE_KEY, JSON.stringify(stored));
+      } catch {}
+    }
+  }
+
+  return stored;
+}
+
 export interface ToastMessage {
   id: string;
   title?: string;
@@ -23,6 +94,10 @@ interface AppState {
   updateSchool: (data: Partial<School>) => Promise<void>;
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
+  sidebarCollapsedGroups: Record<string, boolean>;
+  toggleSidebarGroup: (groupKey: string) => void;
+  setSidebarGroupCollapsed: (groupKey: string, collapsed: boolean) => void;
+  ensureActiveGroupExpanded: (pathname: string) => void;
   mobileDrawerOpen: boolean;
   setMobileDrawerOpen: (open: boolean) => void;
   toasts: ToastMessage[];
@@ -97,6 +172,41 @@ export const useAppStore = create<AppState>((set, get) => {
 
     sidebarCollapsed: false,
     toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+
+    sidebarCollapsedGroups: loadInitialSidebarCollapsedGroups(),
+
+    toggleSidebarGroup: (groupKey: string) => {
+      const current = get().sidebarCollapsedGroups;
+      const isCurrentlyCollapsed = !!current[groupKey];
+      const next = { ...current, [groupKey]: !isCurrentlyCollapsed };
+      try {
+        localStorage.setItem(SIDEBAR_GROUPS_STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      set({ sidebarCollapsedGroups: next });
+    },
+
+    setSidebarGroupCollapsed: (groupKey: string, collapsed: boolean) => {
+      const current = get().sidebarCollapsedGroups;
+      const next = { ...current, [groupKey]: collapsed };
+      try {
+        localStorage.setItem(SIDEBAR_GROUPS_STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      set({ sidebarCollapsedGroups: next });
+    },
+
+    ensureActiveGroupExpanded: (pathname: string) => {
+      const activeGroup = getNavGroupByPath(pathname);
+      if (!activeGroup) return;
+
+      const current = get().sidebarCollapsedGroups;
+      if (current[activeGroup]) {
+        const next = { ...current, [activeGroup]: false };
+        try {
+          localStorage.setItem(SIDEBAR_GROUPS_STORAGE_KEY, JSON.stringify(next));
+        } catch {}
+        set({ sidebarCollapsedGroups: next });
+      }
+    },
 
     mobileDrawerOpen: false,
     setMobileDrawerOpen: (open) => set({ mobileDrawerOpen: open }),

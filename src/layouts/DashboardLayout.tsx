@@ -64,6 +64,9 @@ export const DashboardLayout: React.FC = () => {
     school,
     sidebarCollapsed,
     toggleSidebar,
+    sidebarCollapsedGroups,
+    toggleSidebarGroup,
+    ensureActiveGroupExpanded,
     mobileDrawerOpen,
     setMobileDrawerOpen,
     setIsSearchOpen,
@@ -80,27 +83,7 @@ export const DashboardLayout: React.FC = () => {
     navigate('/login');
   };
 
-  // Persistent Collapsible State for Grouped Menus across page transitions & reloads
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
-    try {
-      const stored = localStorage.getItem('dc_sidebar_collapsed_groups');
-      return stored ? JSON.parse(stored) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  const toggleGroup = (groupKey: string) => {
-    setCollapsedGroups((prev) => {
-      const next = { ...prev, [groupKey]: !prev[groupKey] };
-      try {
-        localStorage.setItem('dc_sidebar_collapsed_groups', JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-  };
-
-  // Helper to determine exact route activity for nested paths (e.g. /students/*)
+  // Helper to determine exact route activity for nested paths (e.g. /students/*, /staff/*)
   const isRouteActive = (routePath: string, exact = false) => {
     const current = location.pathname;
     if (exact || routePath === '/dashboard') {
@@ -115,73 +98,40 @@ export const DashboardLayout: React.FC = () => {
         current === '/students' ||
         (current.startsWith('/students/') &&
           !['/students/new', '/students/archive', '/students/promotion', '/students/session-report'].some(
-            (sub) => current.startsWith(sub)
+            (sub) => current === sub || current.startsWith(sub + '/')
           ))
       );
     }
 
-    // Staff nested route logic: /staff highlights for /staff or /staff/:id, but not /staff/salary
+    // Staff nested route logic: /staff highlights for /staff or /staff/:id, but not /staff/salary or /staff/salary-report
     if (routePath === '/staff') {
       return (
         current === '/staff' ||
-        (current.startsWith('/staff/') && !current.startsWith('/staff/salary'))
-      );
-    }
-
-    // Academics Attendance nested route
-    if (routePath === '/academics/attendance') {
-      return (
-        current.startsWith('/academics/attendance') &&
-        !current.startsWith('/academics/attendance-report')
-      );
-    }
-
-    // Academics Exams nested route
-    if (routePath === '/academics/exams') {
-      return (
-        current.startsWith('/academics/exams') &&
-        !current.startsWith('/academics/exam-schedule')
+        (current.startsWith('/staff/') &&
+          !['/staff/salary', '/staff/salary-report'].some(
+            (sub) => current === sub || current.startsWith(sub + '/')
+          ))
       );
     }
 
     // WhatsApp Reminder alias matching
     if (routePath === '/fees/whatsapp-reminder') {
       return (
-        current.startsWith('/fees/whatsapp-reminder') ||
-        current.startsWith('/fees/reminders')
+        current === '/fees/whatsapp-reminder' ||
+        current.startsWith('/fees/whatsapp-reminder/') ||
+        current === '/fees/reminders' ||
+        current.startsWith('/fees/reminders/')
       );
     }
 
-    return current.startsWith(routePath);
+    // Standard nested route checking with slash delimiter (/route/child)
+    return current === routePath || current.startsWith(routePath + '/');
   };
 
-  // Auto-expand group if current active route belongs to it, ensuring visibility
+  // Auto-expand group if current active route belongs to it, ensuring persistence across transitions
   useEffect(() => {
-    const current = location.pathname;
-    const groupActiveMap: Record<string, boolean> = {
-      main: current === '/dashboard' || current === '/',
-      students: current.startsWith('/students') || current.startsWith('/enquiries'),
-      fees: current.startsWith('/fees'),
-      academics: current.startsWith('/academics'),
-      finance: current.startsWith('/finance'),
-      staff: current.startsWith('/staff'),
-      communication: current.startsWith('/notices'),
-      admin: current.startsWith('/admin'),
-      account: current.startsWith('/account'),
-    };
-
-    Object.entries(groupActiveMap).forEach(([group, isActive]) => {
-      if (isActive && collapsedGroups[group]) {
-        setCollapsedGroups((prev) => {
-          const next = { ...prev, [group]: false };
-          try {
-            localStorage.setItem('dc_sidebar_collapsed_groups', JSON.stringify(next));
-          } catch {}
-          return next;
-        });
-      }
-    });
-  }, [location.pathname]);
+    ensureActiveGroupExpanded(location.pathname);
+  }, [location.pathname, ensureActiveGroupExpanded]);
 
   const navItemClass = (targetPath: string, exact = false, specialColor?: 'green' | 'red' | 'purple' | 'orange') => {
     const active = isRouteActive(targetPath, exact);
@@ -285,18 +235,18 @@ export const DashboardLayout: React.FC = () => {
             {!sidebarCollapsed && (
               <button
                 type="button"
-                onClick={() => toggleGroup('main')}
+                onClick={() => toggleSidebarGroup('main')}
                 className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-teal-200/70 hover:text-white transition-colors group cursor-pointer"
               >
                 <span>MAIN</span>
                 <ChevronDown
                   className={`w-3.5 h-3.5 text-teal-300/60 group-hover:text-white transition-transform duration-200 ${
-                    collapsedGroups['main'] ? '-rotate-90' : 'rotate-0'
+                    sidebarCollapsedGroups['main'] ? '-rotate-90' : 'rotate-0'
                   }`}
                 />
               </button>
             )}
-            {(!collapsedGroups['main'] || sidebarCollapsed) && (
+            {(!sidebarCollapsedGroups['main'] || sidebarCollapsed) && (
               <div className="space-y-1">
                 <NavLink
                   to="/dashboard"
@@ -317,24 +267,24 @@ export const DashboardLayout: React.FC = () => {
             {!sidebarCollapsed && (
               <button
                 type="button"
-                onClick={() => toggleGroup('students')}
+                onClick={() => toggleSidebarGroup('students')}
                 className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-teal-200/70 hover:text-white transition-colors group cursor-pointer"
               >
                 <span className="flex items-center gap-1.5">
                   <span>STUDENTS</span>
-                  {collapsedGroups['students'] &&
+                  {sidebarCollapsedGroups['students'] &&
                     (location.pathname.startsWith('/students') || location.pathname.startsWith('/enquiries')) && (
                       <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
                     )}
                 </span>
                 <ChevronDown
                   className={`w-3.5 h-3.5 text-teal-300/60 group-hover:text-white transition-transform duration-200 ${
-                    collapsedGroups['students'] ? '-rotate-90' : 'rotate-0'
+                    sidebarCollapsedGroups['students'] ? '-rotate-90' : 'rotate-0'
                   }`}
                 />
               </button>
             )}
-            {(!collapsedGroups['students'] || sidebarCollapsed) && (
+            {(!sidebarCollapsedGroups['students'] || sidebarCollapsed) && (
               <div className="space-y-1">
                 {can('manage_enquiries') && (
                   <NavLink
@@ -418,23 +368,23 @@ export const DashboardLayout: React.FC = () => {
             {!sidebarCollapsed && (
               <button
                 type="button"
-                onClick={() => toggleGroup('fees')}
+                onClick={() => toggleSidebarGroup('fees')}
                 className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-teal-200/70 hover:text-white transition-colors group cursor-pointer"
               >
                 <span className="flex items-center gap-1.5">
                   <span>FEES</span>
-                  {collapsedGroups['fees'] && location.pathname.startsWith('/fees') && (
+                  {sidebarCollapsedGroups['fees'] && location.pathname.startsWith('/fees') && (
                     <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
                   )}
                 </span>
                 <ChevronDown
                   className={`w-3.5 h-3.5 text-teal-300/60 group-hover:text-white transition-transform duration-200 ${
-                    collapsedGroups['fees'] ? '-rotate-90' : 'rotate-0'
+                    sidebarCollapsedGroups['fees'] ? '-rotate-90' : 'rotate-0'
                   }`}
                 />
               </button>
             )}
-            {(!collapsedGroups['fees'] || sidebarCollapsed) && (
+            {(!sidebarCollapsedGroups['fees'] || sidebarCollapsed) && (
               <div className="space-y-1">
                 {can('manage_fee_structure') && (
                   <NavLink
@@ -522,23 +472,23 @@ export const DashboardLayout: React.FC = () => {
             {!sidebarCollapsed && (
               <button
                 type="button"
-                onClick={() => toggleGroup('academics')}
+                onClick={() => toggleSidebarGroup('academics')}
                 className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-teal-200/70 hover:text-white transition-colors group cursor-pointer"
               >
                 <span className="flex items-center gap-1.5">
                   <span>ACADEMICS</span>
-                  {collapsedGroups['academics'] && location.pathname.startsWith('/academics') && (
+                  {sidebarCollapsedGroups['academics'] && location.pathname.startsWith('/academics') && (
                     <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
                   )}
                 </span>
                 <ChevronDown
                   className={`w-3.5 h-3.5 text-teal-300/60 group-hover:text-white transition-transform duration-200 ${
-                    collapsedGroups['academics'] ? '-rotate-90' : 'rotate-0'
+                    sidebarCollapsedGroups['academics'] ? '-rotate-90' : 'rotate-0'
                   }`}
                 />
               </button>
             )}
-            {(!collapsedGroups['academics'] || sidebarCollapsed) && (
+            {(!sidebarCollapsedGroups['academics'] || sidebarCollapsed) && (
               <div className="space-y-1">
                 <NavLink
                   to="/academics/attendance"
@@ -630,23 +580,23 @@ export const DashboardLayout: React.FC = () => {
               {!sidebarCollapsed && (
                 <button
                   type="button"
-                  onClick={() => toggleGroup('finance')}
+                  onClick={() => toggleSidebarGroup('finance')}
                   className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-teal-200/70 hover:text-white transition-colors group cursor-pointer"
                 >
                   <span className="flex items-center gap-1.5">
                     <span>FINANCE</span>
-                    {collapsedGroups['finance'] && location.pathname.startsWith('/finance') && (
+                    {sidebarCollapsedGroups['finance'] && location.pathname.startsWith('/finance') && (
                       <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
                     )}
                   </span>
                   <ChevronDown
                     className={`w-3.5 h-3.5 text-teal-300/60 group-hover:text-white transition-transform duration-200 ${
-                      collapsedGroups['finance'] ? '-rotate-90' : 'rotate-0'
+                      sidebarCollapsedGroups['finance'] ? '-rotate-90' : 'rotate-0'
                     }`}
                   />
                 </button>
               )}
-              {(!collapsedGroups['finance'] || sidebarCollapsed) && (
+              {(!sidebarCollapsedGroups['finance'] || sidebarCollapsed) && (
                 <div className="space-y-1">
                   <NavLink
                     to="/finance/expenses"
@@ -696,23 +646,23 @@ export const DashboardLayout: React.FC = () => {
               {!sidebarCollapsed && (
                 <button
                   type="button"
-                  onClick={() => toggleGroup('staff')}
+                  onClick={() => toggleSidebarGroup('staff')}
                   className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-teal-200/70 hover:text-white transition-colors group cursor-pointer"
                 >
                   <span className="flex items-center gap-1.5">
                     <span>STAFF / PAYROLL</span>
-                    {collapsedGroups['staff'] && location.pathname.startsWith('/staff') && (
+                    {sidebarCollapsedGroups['staff'] && location.pathname.startsWith('/staff') && (
                       <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
                     )}
                   </span>
                   <ChevronDown
                     className={`w-3.5 h-3.5 text-teal-300/60 group-hover:text-white transition-transform duration-200 ${
-                      collapsedGroups['staff'] ? '-rotate-90' : 'rotate-0'
+                      sidebarCollapsedGroups['staff'] ? '-rotate-90' : 'rotate-0'
                     }`}
                   />
                 </button>
               )}
-              {(!collapsedGroups['staff'] || sidebarCollapsed) && (
+              {(!sidebarCollapsedGroups['staff'] || sidebarCollapsed) && (
                 <div className="space-y-1">
                   <NavLink
                     to="/staff"
@@ -754,23 +704,23 @@ export const DashboardLayout: React.FC = () => {
             {!sidebarCollapsed && (
               <button
                 type="button"
-                onClick={() => toggleGroup('communication')}
+                onClick={() => toggleSidebarGroup('communication')}
                 className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-teal-200/70 hover:text-white transition-colors group cursor-pointer"
               >
                 <span className="flex items-center gap-1.5">
                   <span>COMMUNICATION</span>
-                  {collapsedGroups['communication'] && location.pathname.startsWith('/notices') && (
+                  {sidebarCollapsedGroups['communication'] && location.pathname.startsWith('/notices') && (
                     <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
                   )}
                 </span>
                 <ChevronDown
                   className={`w-3.5 h-3.5 text-teal-300/60 group-hover:text-white transition-transform duration-200 ${
-                    collapsedGroups['communication'] ? '-rotate-90' : 'rotate-0'
+                    sidebarCollapsedGroups['communication'] ? '-rotate-90' : 'rotate-0'
                   }`}
                 />
               </button>
             )}
-            {(!collapsedGroups['communication'] || sidebarCollapsed) && (
+            {(!sidebarCollapsedGroups['communication'] || sidebarCollapsed) && (
               <div className="space-y-1">
                 <NavLink
                   to="/notices"
@@ -797,23 +747,23 @@ export const DashboardLayout: React.FC = () => {
               {!sidebarCollapsed && (
                 <button
                   type="button"
-                  onClick={() => toggleGroup('admin')}
+                  onClick={() => toggleSidebarGroup('admin')}
                   className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-teal-200/70 hover:text-white transition-colors group cursor-pointer"
                 >
                   <span className="flex items-center gap-1.5">
                     <span>ADMIN</span>
-                    {collapsedGroups['admin'] && location.pathname.startsWith('/admin') && (
+                    {sidebarCollapsedGroups['admin'] && location.pathname.startsWith('/admin') && (
                       <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
                     )}
                   </span>
                   <ChevronDown
                     className={`w-3.5 h-3.5 text-teal-300/60 group-hover:text-white transition-transform duration-200 ${
-                      collapsedGroups['admin'] ? '-rotate-90' : 'rotate-0'
+                      sidebarCollapsedGroups['admin'] ? '-rotate-90' : 'rotate-0'
                     }`}
                   />
                 </button>
               )}
-              {(!collapsedGroups['admin'] || sidebarCollapsed) && (
+              {(!sidebarCollapsedGroups['admin'] || sidebarCollapsed) && (
                 <div className="space-y-1">
                   <NavLink
                     to="/admin/permissions"
@@ -885,23 +835,23 @@ export const DashboardLayout: React.FC = () => {
             {!sidebarCollapsed && (
               <button
                 type="button"
-                onClick={() => toggleGroup('account')}
+                onClick={() => toggleSidebarGroup('account')}
                 className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-teal-200/70 hover:text-white transition-colors group cursor-pointer"
               >
                 <span className="flex items-center gap-1.5">
                   <span>ACCOUNT</span>
-                  {collapsedGroups['account'] && location.pathname.startsWith('/account') && (
+                  {sidebarCollapsedGroups['account'] && location.pathname.startsWith('/account') && (
                     <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
                   )}
                 </span>
                 <ChevronDown
                   className={`w-3.5 h-3.5 text-teal-300/60 group-hover:text-white transition-transform duration-200 ${
-                    collapsedGroups['account'] ? '-rotate-90' : 'rotate-0'
+                    sidebarCollapsedGroups['account'] ? '-rotate-90' : 'rotate-0'
                   }`}
                 />
               </button>
             )}
-            {(!collapsedGroups['account'] || sidebarCollapsed) && (
+            {(!sidebarCollapsedGroups['account'] || sidebarCollapsed) && (
               <div className="space-y-1">
                 <NavLink
                   to="/account/password"
