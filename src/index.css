@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Theme 1: Emerald School (Default) */
+    --theme-name: 'emerald';
+    --bg-canvas: #f1f8f6;
+    --surface-card: #ffffff;
+    --surface-muted: #e8efed;
+    --surface-hover: #eef5f3;
+    --sidebar-gradient-from: #0b5d4b;
+    --sidebar-gradient-via: #084b3d;
+    --sidebar-gradient-to: #073b30;
+    --sidebar-active-pill: #14b8a6;
+    --sidebar-text: #ffffff;
+    --sidebar-muted: #a9f1d9;
+    --brand-primary: #004435;
+    --brand-primary-container: #0b5d4b;
+    --brand-secondary: #006b5f;
+    --brand-accent: #14b8a6;
+    --footer-bg: #1e1b6b;
+    --footer-text: #e0e7ff;
+    --footer-accent: #a5b4fc;
+    --border-color: rgba(11, 93, 75, 0.1);
+  }
+
+  [data-theme='indigo'] {
+    /* Theme 2: Royal Indigo-Navy */
+    --theme-name: 'indigo';
+    --bg-canvas: #f0f4fc;
+    --surface-card: #ffffff;
+    --surface-muted: #e2e8f8;
+    --surface-hover: #edf2fc;
+    --sidebar-gradient-from: #1e1b6b;
+    --sidebar-gradient-via: #171650;
+    --sidebar-gradient-to: #0f0e38;
+    --sidebar-active-pill: #3b82f6;
+    --sidebar-text: #ffffff;
+    --sidebar-muted: #bfdbfe;
+    --brand-primary: #1e1b6b;
+    --brand-primary-container: #2563eb;
+    --brand-secondary: #1d4ed8;
+    --brand-accent: #3b82f6;
+    --footer-bg: #09091f;
+    --footer-text: #e0e7ff;
+    --footer-accent: #93c5fd;
+    --border-color: rgba(30, 27, 107, 0.12);
+  }
+
+  [data-theme='berry'] {
+    /* Theme 3: Berry Twilight */
+    --theme-name: 'berry';
+    --bg-canvas: #fdf2f8;
+    --surface-card: #ffffff;
+    --surface-muted: #fce7f3;
+    --surface-hover: #fdf4f9;
+    --sidebar-gradient-from: #6617d7;
+    --sidebar-gradient-via: #500f9e;
+    --sidebar-gradient-to: #390a73;
+    --sidebar-active-pill: #ec4899;
+    --sidebar-text: #ffffff;
+    --sidebar-muted: #fbcfe8;
+    --brand-primary: #581c87;
+    --brand-primary-container: #7e22ce;
+    --brand-secondary: #db2777;
+    --brand-accent: #ec4899;
+    --footer-bg: #2e0854;
+    --footer-text: #fae8ff;
+    --footer-accent: #f0abfc;
+    --border-color: rgba(102, 23, 215, 0.12);
+  }
+
+  body {
+    background-color: var(--bg-canvas);
+    color: #161d1c;
+    font-family: var(--font-sans);
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(11, 93, 75, 0.2);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(11, 93, 75, 0.35);
+}
+
+/* Print specific styles for Receipts, ID Cards, Marksheets, Admission Form */
+@media print {
+  aside, header, footer, .no-print, button, .modal-backdrop {
+    display: none !important;
+  }
+  body, main {
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .printable-area {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Data Click Education – Management System",
+  "description": "Production-quality Indian School Management System ERP with multi-tenant session management, fee ledgers, admissions, academics, and role-based access control.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

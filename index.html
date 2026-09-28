@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function() {
+        // Prevent and handle "Cannot set property fetch of #<Window> which has only a getter"
+        window.addEventListener('error', function(event) {
+          if (
+            event &&
+            event.message &&
+            (event.message.indexOf('Cannot set property fetch') !== -1 ||
+             (event.message.indexOf('fetch') !== -1 && event.message.indexOf('only a getter') !== -1))
+          ) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+
+        try {
+          var originalFetch = window.fetch;
+          var customFetch = originalFetch;
+          Object.defineProperty(window, 'fetch', {
+            get: function() {
+              return customFetch;
+            },
+            set: function(val) {
+              customFetch = val;
+            },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          try {
+            var proto = Object.getPrototypeOf(window);
+            if (proto) {
+              var protoFetch = proto.fetch;
+              Object.defineProperty(proto, 'fetch', {
+                get: function() {
+                  return customFetch || protoFetch;
+                },
+                set: function(val) {
+                  customFetch = val;
+                },
+                configurable: true,
+                enumerable: true
+              });
+            }
+          } catch (e2) {}
+        }
+      })();
+    </script>
+    <title>Data Click Education – Management System</title>
+    <meta name="description" content="Production-quality Indian School Management System ERP with multi-tenant session management, fee ledgers, admissions, academics, and role-based access control." />
+    <meta property="og:title" content="Data Click Education – Management System" />
+    <meta property="og:description" content="Production-quality Indian School Management System ERP with multi-tenant session management, fee ledgers, admissions, academics, and role-based access control." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-surface text-on-surface antialiased font-sans selection:bg-[#14B8A6] selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
